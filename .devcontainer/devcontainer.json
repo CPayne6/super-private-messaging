@@ -1,0 +1,9 @@
+{
+  "name": "Codex Development Container",
+  "build": { "dockerfile": "Dockerfile" },
+  "remoteUser": "node",
+  "postCreateCommand": "pnpm install --frozen-lockfile",
+  "mounts": [
+    "source=${localEnv:USERPROFILE}/.codex/auth.json,target=/home/node/.codex/auth.json,type=bind,readonly"
+  ]
+}
