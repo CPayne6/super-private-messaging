@@ -1,0 +1,55 @@
+name: super-private-messaging
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: spm
+      POSTGRES_USER: spm
+      POSTGRES_PASSWORD: spm_local_only
+    ports:
+      - "5010:5432"
+    volumes:
+      - spm-postgres-data:/var/lib/postgresql/data
+      - ./apps/api/src/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spm -d spm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6010:6379"
+    volumes:
+      - spm-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  workspace:
+    build:
+      context: .
+    profiles: ["tools"]
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - spm-node-modules:/workspace/node_modules
+      - spm-pnpm-store:/pnpm/store
+    environment:
+      DATABASE_URL: postgresql://spm:spm_local_only@postgres:5432/spm
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  spm-node-modules:
+  spm-pnpm-store:
+  spm-postgres-data:
+  spm-redis-data:
