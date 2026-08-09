@@ -8,6 +8,8 @@ const image = "super-private-messaging-codex:local";
 const dockerfile = resolve(repository, ".devcontainer", "Dockerfile");
 const buildContext = resolve(repository, ".devcontainer");
 const authFile = resolve(homedir(), ".codex", "auth.json");
+const sshDirectory = resolve(homedir(), ".ssh");
+const gitConfig = resolve(homedir(), ".gitconfig");
 
 function run(command, args) {
   const result = spawnSync(command, args, { stdio: "inherit" });
@@ -38,6 +40,10 @@ if (existsSync(authFile)) {
   console.warn(`Codex authentication was not found at ${authFile}. Sign in with Codex on the host first, then rerun this command.`);
   process.exit(1);
 }
+
+// Git credentials remain host-owned and read-only inside the development container.
+if (existsSync(sshDirectory)) args.push("--mount", `type=bind,src=${sshDirectory},dst=/home/node/.ssh,readonly`);
+if (existsSync(gitConfig)) args.push("--mount", `type=bind,src=${gitConfig},dst=/home/node/.gitconfig,readonly`);
 
 args.push(image, "codex", "--yolo", ...process.argv.slice(2));
 run("docker", args);
