@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -7,6 +7,7 @@ const repository = resolve(import.meta.dirname, "..");
 const image = "super-private-messaging-codex:local";
 const dockerfile = resolve(repository, ".devcontainer", "Dockerfile");
 const buildContext = resolve(repository, ".devcontainer");
+const codexDirectory = resolve(repository, ".codex");
 const authFile = resolve(homedir(), ".codex", "auth.json");
 const sshDirectory = resolve(homedir(), ".ssh");
 const gitConfig = resolve(homedir(), ".gitconfig");
@@ -22,6 +23,10 @@ function run(command, args) {
 
 run("docker", ["build", "--tag", image, "--file", dockerfile, buildContext]);
 
+// This directory is bind-mounted into the otherwise ephemeral container so
+// repository-specific Codex settings, sessions, and local state survive runs.
+mkdirSync(codexDirectory, { recursive: true });
+
 const args = [
   "run",
   "--rm",
@@ -30,6 +35,8 @@ const args = [
   "/workspace/super-private-messaging",
   "--mount",
   `type=bind,src=${repository},dst=/workspace/super-private-messaging`,
+  "--mount",
+  `type=bind,src=${codexDirectory},dst=/home/node/.codex`,
 ];
 
 if (process.stdin.isTTY && process.stdout.isTTY) args.push("--interactive", "--tty");
