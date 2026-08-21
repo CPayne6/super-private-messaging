@@ -1,0 +1,171 @@
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #f8fafc;
+}
+
+.page {
+  min-height: 100vh;
+}
+
+.identity-setup {
+  max-width: 720px;
+  margin: 12vh auto;
+  padding: 24px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.messenger-page {
+  padding: 24px;
+}
+
+.messenger {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  min-height: calc(100vh - 48px);
+  max-width: 1200px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(15 23 42 / 8%);
+}
+
+.conversation-list {
+  padding: 18px;
+  border-right: 1px solid #dbe4ee;
+  background: #f8fafc;
+}
+
+.identity-header,
+.thread-header,
+.composer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.identity-header .ant-typography {
+  margin: 0;
+}
+
+.conversation {
+  padding: 10px !important;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.conversation.active,
+.conversation:hover {
+  background: #e0f2fe;
+}
+
+.conversation .ant-list-item-meta-description {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.thread {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.thread-header {
+  min-height: 72px;
+  padding: 0 24px;
+  border-bottom: 1px solid #dbe4ee;
+}
+
+.thread-header .ant-typography {
+  margin: 0;
+}
+
+.message-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.message-row {
+  display: flex;
+}
+
+.message-row.outgoing {
+  justify-content: flex-end;
+}
+
+.message-bubble {
+  max-width: min(75%, 560px);
+  padding: 10px 12px;
+  color: #0f172a;
+  border-radius: 12px;
+  background: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.message-row.outgoing .message-bubble {
+  color: #fff;
+  background: #155e75;
+}
+
+.message-bubble small {
+  display: block;
+  margin-top: 6px;
+  opacity: 0.72;
+}
+
+.composer {
+  padding: 16px 24px;
+  border-top: 1px solid #dbe4ee;
+}
+
+.composer .ant-input {
+  resize: none;
+}
+
+.empty-thread {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  color: #64748b;
+}
+
+.messenger-status {
+  margin: 0 24px 16px;
+}
+
+@media (max-width: 720px) {
+  .messenger-page {
+    padding: 0;
+  }
+
+  .messenger {
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .conversation-list {
+    max-height: 36vh;
+    border-right: 0;
+    border-bottom: 1px solid #dbe4ee;
+    overflow-y: auto;
+  }
+}

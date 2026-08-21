@@ -3,6 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "build": "tsc -p tsconfig.json", "check": "tsc --noEmit -p tsconfig.json" },
-  "dependencies": { "@spm/protocol": "workspace:*" }
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3010",
+    "build": "vite build",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@spm/protocol": "workspace:*",
+    "@vitejs/plugin-react": "^5.2.0",
+    "antd": "^5.29.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vite": "^7.3.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tailwindcss": "^4.3.3"
+  }
 }
