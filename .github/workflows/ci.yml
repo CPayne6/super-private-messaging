@@ -10,9 +10,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22.17.1, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      # The web and API packages consume declaration files emitted by the
-      # shared protocol workspace, so build it before recursive type checks.
-      - run: pnpm build && pnpm check && pnpm lint && pnpm test
+      # The web and API packages consume files emitted by the shared protocol
+      # workspace. Build in dependency order before recursive checks.
+      - run: pnpm --filter @spm/protocol build
+      - run: pnpm --filter @spm/api build
+      - run: pnpm --filter @spm/web build
+      - run: pnpm check && pnpm lint && pnpm test
       - run: docker compose up --build --wait
       - run: curl --fail http://localhost:8010/health/ready && curl --fail http://localhost:3010/
       - if: always()
