@@ -1,0 +1,10 @@
+services:
+  tests:
+    build: { context: ., target: base }
+    profiles: ["test"]
+    command: ["pnpm", "test"]
+    environment:
+      DATABASE_URL: postgresql://spm_app:spm_app_local_only@postgres:5432/spm
+      REDIS_URL: redis://:spm_redis_local_only@redis:6379
+    depends_on:
+      api: { condition: service_healthy }

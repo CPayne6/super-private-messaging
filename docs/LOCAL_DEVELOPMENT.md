@@ -1,29 +1,31 @@
 # Local development
 
-Start the backing services:
+Start the complete local stack:
 
 ```sh
-docker compose up -d postgres redis
+cp .env.example .env
+pnpm dev
 ```
+
+`pnpm dev` uses `docker-compose.dev.yml`: the API runs in development mode and
+the UI runs through Vite at `http://localhost:3010`. UI source changes are
+bind-mounted and hot-reload in the browser. It reuses the same local services,
+ports, and data volumes as `docker-compose.yml`, so the two configurations are
+alternatives—not stacks to run at the same time. Use `pnpm dev:logs` to follow
+the stack and `pnpm dev:down` to stop it.
+
+`docker-compose.yml` remains the production-shaped local build: it serves the
+compiled UI from Nginx and retains the runtime hardening settings. Start it
+explicitly with `pnpm docker:up` when validating that image.
 
 The local endpoints use the `X010` port convention:
 
 - PostgreSQL: `localhost:5010` (`spm` / `spm_local_only`, database `spm`)
 - Redis: `localhost:6010`
 
-The PostgreSQL schema is installed from `apps/api/src/schema.sql` when the
-database volume is first created. To apply it again from a clean database,
-run `docker compose down -v` and start the services again.
+Versioned migrations run once through the `migrate` job. Local database and
+Redis data live in named volumes; use `docker compose -f docker-compose.dev.yml down -v` only when you
+intentionally want a clean local database.
 
-Run repository commands in an ephemeral container with the service addresses
-preconfigured:
-
-```sh
-docker compose --profile tools run --rm workspace pnpm build
-docker compose --profile tools run --rm workspace pnpm test
-```
-
-The workspace presently contains protocol, API-domain, and browser-domain
-libraries only; it does not yet define an HTTP or web-server process. When one
-is added, expose its host port using the same `X010` suffix in
-`docker-compose.yml`.
+The API is available at `http://localhost:8010` and the same-origin web UI at
+`http://localhost:3010`. Run `pnpm docker:test` for the disposable test stack.

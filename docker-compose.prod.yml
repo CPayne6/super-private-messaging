@@ -1,0 +1,146 @@
+name: super-private-messaging
+
+# Docker Swarm production stack. All secret values are supplied as Docker
+# secrets; see deploy/.env.production.example and scripts/setup-secrets.sh.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: spm
+      POSTGRES_USER: spm_migrate
+      POSTGRES_PASSWORD_FILE: /run/secrets/spm_postgres_password
+    secrets: [spm_postgres_password]
+    volumes: [spm-postgres-data:/var/lib/postgresql/data]
+    networks: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spm_migrate -d spm"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 3 }
+      resources:
+        limits: { cpus: "0.25", memory: 256M }
+        reservations: { cpus: "0.10", memory: 128M }
+
+  redis:
+    image: redis:7.4-alpine
+    entrypoint: ["/bin/sh", "-ec"]
+    command: >-
+      exec redis-server --appendonly yes --maxmemory 96mb --maxmemory-policy noeviction
+      --requirepass "$$(cat /run/secrets/spm_redis_password)"
+    secrets: [spm_redis_password]
+    volumes: [spm-redis-data:/data]
+    networks: [cache]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/spm_redis_password)\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 3 }
+      resources:
+        limits: { cpus: "0.10", memory: 128M }
+        reservations: { cpus: "0.05", memory: 64M }
+
+  migrate:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/super-private-messaging-migrate:${IMAGE_TAG:-latest}
+    environment:
+      POSTGRES_DB: spm
+      POSTGRES_MIGRATION_USER: spm_migrate
+      POSTGRES_MIGRATION_PASSWORD_FILE: /run/secrets/spm_migration_password
+      POSTGRES_APP_USER: spm_app
+      POSTGRES_APP_PASSWORD_FILE: /run/secrets/spm_app_password
+    secrets:
+      - source: spm_postgres_password
+        target: spm_migration_password
+      - spm_app_password
+    networks: [database]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: on-failure, delay: 5s, max_attempts: 20 }
+      resources:
+        limits: { cpus: "0.10", memory: 96M }
+        reservations: { cpus: "0.05", memory: 48M }
+
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/super-private-messaging-api:${IMAGE_TAG:-latest}
+    environment:
+      NODE_ENV: production
+      PORT: 8010
+      TRUST_PROXY: "true"
+      DATABASE_URL_FILE: /run/secrets/spm_database_url
+      REDIS_URL_FILE: /run/secrets/spm_redis_url
+      ALLOWED_ORIGINS_FILE: /run/secrets/spm_allowed_origins
+    secrets: [spm_database_url, spm_redis_url, spm_allowed_origins]
+    networks: [database, cache, application]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8010/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 5 }
+      resources:
+        limits: { cpus: "0.25", memory: 256M }
+        reservations: { cpus: "0.10", memory: 128M }
+      update_config: { parallelism: 1, delay: 5s, order: start-first, failure_action: rollback }
+
+  web:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/super-private-messaging-web:${IMAGE_TAG:-latest}
+    networks: [application, edge]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 20s
+      timeout: 3s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 5 }
+      resources:
+        limits: { cpus: "0.05", memory: 64M }
+        reservations: { cpus: "0.02", memory: 32M }
+      update_config: { parallelism: 1, delay: 5s, order: start-first, failure_action: rollback }
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.8.1
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN_FILE: /run/secrets/spm_cloudflare_tunnel_token
+    secrets: [spm_cloudflare_tunnel_token]
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "cloudflared", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any, delay: 5s, max_attempts: 5 }
+      resources:
+        limits: { cpus: "0.05", memory: 64M }
+        reservations: { cpus: "0.02", memory: 32M }
+
+networks:
+  database: { driver: overlay, internal: true }
+  cache: { driver: overlay, internal: true }
+  application: { driver: overlay, internal: true }
+  edge: { driver: overlay }
+
+volumes:
+  spm-postgres-data: {}
+  spm-redis-data: {}
+
+secrets:
+  spm_postgres_password: { external: true }
+  spm_app_password: { external: true }
+  spm_redis_password: { external: true }
+  spm_database_url: { external: true }
+  spm_redis_url: { external: true }
+  spm_allowed_origins: { external: true }
+  spm_cloudflare_tunnel_token: { external: true }
