@@ -4,3 +4,5 @@ dist/
 .env
 .codex/*
 !.codex/config.toml
+.env.production
+deploy/.env.production

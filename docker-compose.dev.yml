@@ -1,4 +1,8 @@
+# Share the project name and development data with docker-compose.yml so a
+# `pnpm dev` switch replaces the static web/API containers instead of trying to
+# run a second stack on the same local ports.
 name: super-private-messaging
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -9,14 +13,16 @@ services:
     ports: ["127.0.0.1:5010:5432"]
     volumes: ["spm-postgres-data:/var/lib/postgresql/data"]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"], interval: 5s, timeout: 5s, retries: 20 }
+
   redis:
     image: redis:7.4-alpine
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-spm_redis_local_only}"]
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-spm_redis_local_only}"
     ports: ["127.0.0.1:6010:6379"]
     volumes: ["spm-redis-data:/data"]
     healthcheck: { test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $$REDIS_PASSWORD ping | grep PONG"], interval: 5s, timeout: 5s, retries: 20 }
-    environment:
-      REDIS_PASSWORD: "${REDIS_PASSWORD:-spm_redis_local_only}"
+
   migrate:
     image: postgres:17-alpine
     restart: "no"
@@ -29,27 +35,42 @@ services:
       POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-spm_app_local_only}
     command: ["/bin/sh", "/migrations/migrate.sh"]
     depends_on: { postgres: { condition: service_healthy } }
+
   api:
-    build: { context: ., target: api }
+    build: { context: ., target: api-dev }
     environment:
+      NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_APP_USER:-spm_app}:${POSTGRES_APP_PASSWORD:-spm_app_local_only}@postgres:5432/${POSTGRES_DB:-spm}
       REDIS_URL: redis://:${REDIS_PASSWORD:-spm_redis_local_only}@redis:6379
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3010}
-      NODE_ENV: production
     ports: ["127.0.0.1:8010:8010"]
+    volumes:
+      - ./apps/api/src:/app/apps/api/src:delegated
+      - ./apps/api/tsconfig.json:/app/apps/api/tsconfig.json:ro
+      - ./packages/protocol/src:/app/packages/protocol/src:delegated
+      - ./packages/protocol/tsconfig.json:/app/packages/protocol/tsconfig.json:ro
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
     depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_healthy } }
-    read_only: true
-    tmpfs: ["/tmp"]
-    cap_drop: ["ALL"]
-    security_opt: ["no-new-privileges:true"]
     healthcheck: { test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8010/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"], interval: 5s, timeout: 5s, retries: 20 }
+
   web:
-    build: { context: ., target: web }
-    ports: ["127.0.0.1:3010:8080"]
+    build: { context: ., target: web-dev }
+    environment:
+      NODE_ENV: development
+      API_PROXY_TARGET: http://api:8010
+      CHOKIDAR_USEPOLLING: "true"
+    ports: ["127.0.0.1:3010:3010"]
+    volumes:
+      - ./apps/web/src:/app/apps/web/src:delegated
+      - ./apps/web/index.html:/app/apps/web/index.html:ro
+      - ./apps/web/vite.config.ts:/app/apps/web/vite.config.ts:ro
+      - ./apps/web/tsconfig.json:/app/apps/web/tsconfig.json:ro
+      - ./packages/protocol/src:/app/packages/protocol/src:delegated
+      - ./packages/protocol/tsconfig.json:/app/packages/protocol/tsconfig.json:ro
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
     depends_on: { api: { condition: service_healthy } }
-    read_only: true
-    tmpfs: ["/tmp", "/var/cache/nginx", "/var/run"]
-    cap_drop: ["ALL"]
-    security_opt: ["no-new-privileges:true"]
-    healthcheck: { test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"], interval: 5s, timeout: 5s, retries: 20 }
-volumes: { spm-postgres-data: {}, spm-redis-data: {} }
+    healthcheck: { test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3010/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"], interval: 5s, timeout: 5s, retries: 20 }
+
+volumes:
+  spm-postgres-data: {}
+  spm-redis-data: {}

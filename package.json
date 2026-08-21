@@ -4,10 +4,19 @@
   "private": true,
   "packageManager": "pnpm@10.26.2",
   "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:down": "node scripts/dev-down.mjs",
+    "dev:ps": "docker compose -f docker-compose.dev.yml ps",
+    "dev:logs": "docker compose -f docker-compose.dev.yml logs -f",
     "build": "pnpm -r build",
     "check": "pnpm -r check",
+    "lint": "pnpm -r --if-present lint",
     "codex": "node scripts/codex-container.mjs",
-    "test": "pnpm --filter @spm/protocol test"
+    "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @spm/api test:e2e",
+    "docker:up": "docker compose up --build --wait",
+    "docker:test": "docker compose -f docker-compose.yml -f docker-compose.test.yml --profile test up --build --abort-on-container-exit --exit-code-from tests",
+    "docker:down": "docker compose down --remove-orphans"
   },
   "devDependencies": { "typescript": "5.9.3" }
 }
