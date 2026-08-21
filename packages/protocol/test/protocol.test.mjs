@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canonicalCbor, normalizeUsername } from "../dist/index.js";
+import { canonicalCbor, normalizeUsername, protocolFixtures, validateEnvelope, validatePrekeyBundle, validateSignedRequest } from "../dist/index.js";
 
 test("normalizes and validates handles", () => assert.equal(normalizeUsername("Alice_1"), "alice_1"));
 test("canonical map order is stable", () => assert.deepEqual(canonicalCbor({ b: 1, a: 2 }), canonicalCbor({ a: 2, b: 1 })));
@@ -18,4 +18,15 @@ test("canonical map keys use encoded UTF-8 byte ordering", () => {
     [...canonicalCbor({ "é": 1, z: 2 })],
     [0xa2, 0x61, 0x7a, 0x02, 0x62, 0xc3, 0xa9, 0x01]
   );
+});
+
+test("fixtures satisfy the frozen public and wire contracts", () => {
+  assert.equal(validatePrekeyBundle(protocolFixtures.bundle).username, "alice");
+  assert.equal(validateEnvelope(protocolFixtures.envelope).recipient, "bob");
+  assert.equal(validateSignedRequest(protocolFixtures.signedRequest, 1_700_000_000_000).route, "/v1/messages");
+});
+
+test("signed inputs reject an expired challenge and plaintext-sized envelope", () => {
+  assert.throws(() => validateSignedRequest(protocolFixtures.signedRequest, protocolFixtures.signedRequest.expiresAt));
+  assert.throws(() => validateEnvelope({ ...protocolFixtures.envelope, ciphertext: new Uint8Array(0) }));
 });
