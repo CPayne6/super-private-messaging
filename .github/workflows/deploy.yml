@@ -35,8 +35,8 @@ jobs:
           target: ${{ matrix.target }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/super-private-messaging-${{ matrix.image }}:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/super-private-messaging-${{ matrix.image }}:production
+            ghcr.io/cpayne6/super-private-messaging-${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/cpayne6/super-private-messaging-${{ matrix.image }}:production
 
   deploy:
     needs: images
@@ -59,4 +59,4 @@ jobs:
           script: |
             chmod +x ${{ vars.DEPLOY_PROJECT_DIR }}/scripts/deploy.sh
             cd ${{ vars.DEPLOY_PROJECT_DIR }}
-            PROJECT_DIR=${{ vars.DEPLOY_PROJECT_DIR }} GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }} IMAGE_TAG=${{ github.sha }} ./scripts/deploy.sh
+            PROJECT_DIR=${{ vars.DEPLOY_PROJECT_DIR }} GITHUB_REPOSITORY_OWNER=cpayne6 IMAGE_TAG=${{ github.sha }} ./scripts/deploy.sh
