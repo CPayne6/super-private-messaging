@@ -9,7 +9,9 @@ COPY packages/protocol/package.json packages/protocol/package.json
 RUN pnpm install --frozen-lockfile
 COPY . .
 FROM base AS api-build
-RUN pnpm --filter @spm/api build \
+RUN rm -f packages/protocol/tsconfig.tsbuildinfo apps/api/tsconfig.tsbuildinfo apps/web/tsconfig.tsbuildinfo \
+  && pnpm --filter @spm/protocol build \
+  && pnpm --filter @spm/api build \
   && pnpm --filter @spm/api --prod deploy --legacy /app/production-api
 
 # Development targets keep the workspace dependencies in the image while
@@ -38,7 +40,9 @@ COPY apps/api/migrations /migrations
 ENTRYPOINT ["/bin/sh", "/migrations/migrate.sh"]
 
 FROM base AS web-build
-RUN pnpm --filter @spm/web build
+RUN rm -f packages/protocol/tsconfig.tsbuildinfo apps/web/tsconfig.tsbuildinfo \
+  && pnpm --filter @spm/protocol build \
+  && pnpm --filter @spm/web build
 FROM nginxinc/nginx-unprivileged:1.29-alpine AS web
 COPY deploy/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=web-build /app/apps/web/dist /usr/share/nginx/html
