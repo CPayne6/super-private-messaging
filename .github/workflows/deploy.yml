@@ -1,0 +1,62 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write }
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            target: api
+          - image: migrate
+            target: migrate
+          - image: web
+            target: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/super-private-messaging-${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/super-private-messaging-${{ matrix.image }}:production
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: docker-compose.prod.yml,scripts/deploy.sh
+          target: ${{ vars.DEPLOY_PROJECT_DIR }}
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            chmod +x ${{ vars.DEPLOY_PROJECT_DIR }}/scripts/deploy.sh
+            cd ${{ vars.DEPLOY_PROJECT_DIR }}
+            PROJECT_DIR=${{ vars.DEPLOY_PROJECT_DIR }} GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }} IMAGE_TAG=${{ github.sha }} ./scripts/deploy.sh
