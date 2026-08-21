@@ -10,6 +10,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22.17.1, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      - run: rm -f packages/protocol/tsconfig.tsbuildinfo apps/api/tsconfig.tsbuildinfo apps/web/tsconfig.tsbuildinfo
       # The web and API packages consume files emitted by the shared protocol
       # workspace. Build in dependency order before recursive checks.
       - run: pnpm --filter @spm/protocol build
