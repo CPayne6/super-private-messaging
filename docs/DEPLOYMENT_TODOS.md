@@ -42,15 +42,15 @@ defined in `docker-compose.prod.yml`.
 
 ## 4. Production secrets
 
-- [ ] Copy `deploy/.env.production.example` to `deploy/.env.production` on a
+- [x] Copy `deploy/.env.production.example` to `deploy/.env.production` on a
   trusted workstation; do not commit it.
-- [ ] Generate unique, high-entropy PostgreSQL, application-role, and Redis
+- [x] Generate unique, high-entropy PostgreSQL, application-role, and Redis
   passwords.
-- [ ] Set `DATABASE_URL` and `REDIS_URL` with correctly URL-encoded passwords.
-- [ ] Add the Cloudflare Tunnel token and final allowed origin.
-- [ ] Create the Swarm secrets:
+- [x] Set `DATABASE_URL` and `REDIS_URL` with correctly URL-encoded passwords.
+- [x] Add the Cloudflare Tunnel token and final allowed origin.
+- [x] Create the Swarm secrets:
   `DEPLOY_HOST=spm-prod bash scripts/setup-secrets.sh`.
-- [ ] Confirm `docker secret ls` on the server lists all `spm_*` secrets.
+- [x] Confirm `docker secret ls` on the server lists all `spm_*` secrets.
 
 ## 5. First deployment
 
