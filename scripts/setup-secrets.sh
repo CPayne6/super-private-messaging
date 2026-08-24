@@ -19,6 +19,7 @@ set +a
 
 declare -A secrets=(
   [spm_postgres_password]="${POSTGRES_PASSWORD:?}"
+  [spm_migration_password]="${POSTGRES_MIGRATION_PASSWORD:?}"
   [spm_app_password]="${POSTGRES_APP_PASSWORD:?}"
   [spm_database_url]="${DATABASE_URL:?}"
   [spm_redis_password]="${REDIS_PASSWORD:?}"

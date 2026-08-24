@@ -8,7 +8,7 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER:?Set GITHUB_REPOSITORY_OWNER}"
 
 required_secrets=(
-  spm_postgres_password spm_app_password
+  spm_postgres_password spm_migration_password spm_app_password
   spm_database_url spm_redis_password spm_redis_url spm_allowed_origins
   spm_cloudflare_tunnel_token
 )
