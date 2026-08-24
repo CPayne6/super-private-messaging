@@ -20,7 +20,13 @@ for secret in "${required_secrets[@]}"; do
 done
 
 for image in api migrate web; do
-  docker pull "ghcr.io/$GITHUB_REPOSITORY_OWNER/super-private-messaging-$image:$IMAGE_TAG"
+  image_ref="ghcr.io/$GITHUB_REPOSITORY_OWNER/super-private-messaging-$image:$IMAGE_TAG"
+  if ! docker pull "$image_ref"; then
+    # Preserve the ScoutLGS deployment behavior: Swarm receives the registry
+    # credentials below and can retry the pull when it schedules the update.
+    # This also permits a deploy when the image is already cached locally.
+    echo "Warning: failed to pre-pull $image_ref; Swarm will retry during stack deployment" >&2
+  fi
 done
 
 cd "$PROJECT_DIR"

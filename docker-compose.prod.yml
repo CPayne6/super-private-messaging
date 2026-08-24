@@ -21,8 +21,8 @@ services:
       replicas: 1
       restart_policy: { condition: any, delay: 5s, max_attempts: 3 }
       resources:
-        limits: { cpus: "0.25", memory: 256M }
-        reservations: { cpus: "0.10", memory: 128M }
+        limits: { cpus: "0.50", memory: 2G }
+        reservations: { cpus: "0.20", memory: 1G }
 
   redis:
     image: redis:7.4-alpine
@@ -42,8 +42,8 @@ services:
       replicas: 1
       restart_policy: { condition: any, delay: 5s, max_attempts: 3 }
       resources:
-        limits: { cpus: "0.10", memory: 128M }
-        reservations: { cpus: "0.05", memory: 64M }
+        limits: { cpus: "0.25", memory: 512M }
+        reservations: { cpus: "0.10", memory: 256M }
 
   migrate:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/super-private-messaging-migrate:${IMAGE_TAG:-latest}
@@ -62,8 +62,8 @@ services:
       replicas: 1
       restart_policy: { condition: on-failure, delay: 5s, max_attempts: 20 }
       resources:
-        limits: { cpus: "0.10", memory: 96M }
-        reservations: { cpus: "0.05", memory: 48M }
+        limits: { cpus: "0.25", memory: 512M }
+        reservations: { cpus: "0.10", memory: 256M }
 
   api:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/super-private-messaging-api:${IMAGE_TAG:-latest}
@@ -86,8 +86,8 @@ services:
       replicas: 1
       restart_policy: { condition: any, delay: 5s, max_attempts: 5 }
       resources:
-        limits: { cpus: "0.25", memory: 256M }
-        reservations: { cpus: "0.10", memory: 128M }
+        limits: { cpus: "0.75", memory: 1536M }
+        reservations: { cpus: "0.30", memory: 768M }
       update_config: { parallelism: 1, delay: 5s, order: start-first, failure_action: rollback }
 
   web:
@@ -102,8 +102,8 @@ services:
       replicas: 1
       restart_policy: { condition: any, delay: 5s, max_attempts: 5 }
       resources:
-        limits: { cpus: "0.05", memory: 64M }
-        reservations: { cpus: "0.02", memory: 32M }
+        limits: { cpus: "0.15", memory: 256M }
+        reservations: { cpus: "0.05", memory: 128M }
       update_config: { parallelism: 1, delay: 5s, order: start-first, failure_action: rollback }
 
   cloudflared:
@@ -123,8 +123,8 @@ services:
       replicas: 1
       restart_policy: { condition: any, delay: 5s, max_attempts: 5 }
       resources:
-        limits: { cpus: "0.05", memory: 64M }
-        reservations: { cpus: "0.02", memory: 32M }
+        limits: { cpus: "0.15", memory: 256M }
+        reservations: { cpus: "0.05", memory: 128M }
 
 networks:
   database: { driver: overlay, internal: true }

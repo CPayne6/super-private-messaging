@@ -5,19 +5,23 @@ defined in `docker-compose.prod.yml`.
 
 ## 1. Server foundation
 
-- [ ] Provision a small Linux server with Docker Engine installed.
-- [ ] Create a dedicated, non-root `deploy` user with Docker access.
-- [ ] Initialize single-node Swarm mode: `docker swarm init`.
-- [ ] Create `/home/deploy/super-private-messaging` and make it owned by the
+- [x] Provision a small Linux server with Docker Engine installed.
+- [x] Create a dedicated, non-root `deploy` user with Docker access.
+- [x] Initialize single-node Swarm mode: `docker swarm init`.
+- [x] Create `/home/deploy/super-private-messaging` and make it owned by the
   deploy user.
-- [ ] Log Docker in to GHCR on the server, using an account or fine-grained
+- [x] Log Docker in to GHCR on the server, using an account or fine-grained
   token that can pull this repository's packages.
-- [ ] Confirm the server has persistent disk capacity for PostgreSQL backups
+- [x] Refresh the server's existing GHCR Docker login and grant it package-read
+  access to both the ScoutLGS and VaultChat packages; verify authenticated
+  pulls of `ghcr.io/cpayne6/scoutlgs-scraper:production` and the VaultChat API
+  image before rerunning the production workflow.
+- [x] Confirm the server has persistent disk capacity for PostgreSQL backups
   and Docker volumes.
 
 ## 2. Dedicated deployment access
 
-- [ ] Add `C:\Users\cpayn\.ssh\spm_deploy_key.pub` to the server deploy user's
+- [x] Add `C:\Users\cpayn\.ssh\spm_deploy_key.pub` to the server deploy user's
   `~/.ssh/authorized_keys`.
 - [ ] Add the `spm-prod` SSH host entry from `docs/PRODUCTION.md` to the local
   SSH configuration.
