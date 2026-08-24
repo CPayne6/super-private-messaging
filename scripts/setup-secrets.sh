@@ -17,6 +17,12 @@ set -a
 source "$ENV_FILE"
 set +a
 
+# Keep the local production file focused on independent values. The URLs are
+# derived here when omitted, after their password variables have been loaded.
+# Generated hexadecimal passwords are URL-safe.
+DATABASE_URL="${DATABASE_URL:-postgresql://spm_app:${POSTGRES_APP_PASSWORD:?}@postgres:5432/spm}"
+REDIS_URL="${REDIS_URL:-redis://:${REDIS_PASSWORD:?}@redis:6379}"
+
 declare -A secrets=(
   [spm_postgres_password]="${POSTGRES_PASSWORD:?}"
   [spm_app_password]="${POSTGRES_APP_PASSWORD:?}"
