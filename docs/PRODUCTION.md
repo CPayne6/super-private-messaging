@@ -32,8 +32,10 @@ stack to about 1 GiB RAM and 1 CPU at maximum; normal reservations total about
 
 The GitHub Actions workflow performs steps 3's deployment half automatically
 for pushes to `production`. Configure its `production` environment with
-`DEPLOY_HOST`, `DEPLOY_USER`, and `DEPLOY_SSH_KEY` secrets plus a
-`DEPLOY_PROJECT_DIR` variable. The initial secret setup remains manual.
+`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `CF_ACCESS_CLIENT_ID`, and
+`CF_ACCESS_CLIENT_SECRET` secrets plus a `DEPLOY_PROJECT_DIR` variable. The
+workflow connects through the existing Cloudflare Access SSH route. The
+initial secret setup remains manual.
 Set `DEPLOY_SSH_KEY` to the complete contents of `~/.ssh/spm_deploy_key` (the
 private key), never the `.pub` file.
 

@@ -44,19 +44,33 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: docker-compose.prod.yml,scripts/deploy.sh
-          target: ${{ vars.DEPLOY_PROJECT_DIR }}
-      - uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            chmod +x ${{ vars.DEPLOY_PROJECT_DIR }}/scripts/deploy.sh
-            cd ${{ vars.DEPLOY_PROJECT_DIR }}
-            PROJECT_DIR=${{ vars.DEPLOY_PROJECT_DIR }} GITHUB_REPOSITORY_OWNER=cpayne6 IMAGE_TAG=${{ github.sha }} ./scripts/deploy.sh
+      - name: Install Cloudflare Access client
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -O /tmp/cloudflared.deb
+          sudo dpkg -i /tmp/cloudflared.deb
+          cloudflared --version
+      - name: Configure Cloudflare Access SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/spm_deploy_key
+          chmod 600 ~/.ssh/spm_deploy_key
+          cat > ~/.ssh/config << EOF
+          Host spm-prod
+            HostName ${{ secrets.DEPLOY_HOST }}
+            User ${{ secrets.DEPLOY_USER }}
+            IdentityFile ~/.ssh/spm_deploy_key
+            IdentitiesOnly yes
+            ProxyCommand cloudflared access ssh --hostname ${{ secrets.DEPLOY_HOST }} --id ${{ secrets.CF_ACCESS_CLIENT_ID }} --secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+            StrictHostKeyChecking no
+            UserKnownHostsFile=/dev/null
+          EOF
+          chmod 600 ~/.ssh/config
+      - name: Copy deployment files
+        run: |
+          ssh spm-prod "mkdir -p '${{ vars.DEPLOY_PROJECT_DIR }}/scripts'"
+          scp docker-compose.prod.yml "spm-prod:${{ vars.DEPLOY_PROJECT_DIR }}/docker-compose.prod.yml"
+          scp scripts/deploy.sh "spm-prod:${{ vars.DEPLOY_PROJECT_DIR }}/scripts/deploy.sh"
+      - name: Deploy stack
+        run: |
+          ssh spm-prod "chmod +x '${{ vars.DEPLOY_PROJECT_DIR }}/scripts/deploy.sh' && cd '${{ vars.DEPLOY_PROJECT_DIR }}' && PROJECT_DIR='${{ vars.DEPLOY_PROJECT_DIR }}' GITHUB_REPOSITORY_OWNER=cpayne6 IMAGE_TAG=${{ github.sha }} ./scripts/deploy.sh"

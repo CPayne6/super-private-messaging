@@ -28,12 +28,13 @@ defined in `docker-compose.prod.yml`.
 - [ ] Verify the isolated key works: `ssh spm-prod 'docker info'`.
 - [ ] Store the private key from `C:\Users\cpayn\.ssh\spm_deploy_key` as the
   GitHub `production` environment secret `DEPLOY_SSH_KEY`.
-- [ ] Add `DEPLOY_HOST`, `DEPLOY_USER`, and `DEPLOY_PROJECT_DIR` to the same
-  GitHub environment.
+- [ ] Add `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`,
+  `CF_ACCESS_CLIENT_ID`, and `CF_ACCESS_CLIENT_SECRET` to the GitHub
+  `production` environment, plus `DEPLOY_PROJECT_DIR` as a variable.
 
 ## 3. Domain and public ingress
 
-- [ ] Create a Cloudflare Tunnel for this application.
+- [x] Create a Cloudflare Tunnel for this application.
 - [ ] Configure its public hostname to route to `http://web:8080`.
 - [ ] Set the final public URL in `ALLOWED_ORIGINS`; include no development
   origins in the production value.
