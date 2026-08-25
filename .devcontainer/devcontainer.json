@@ -3,10 +3,14 @@
   "build": { "dockerfile": "Dockerfile" },
   "remoteUser": "node",
   "postCreateCommand": "pnpm install --frozen-lockfile",
+  "remoteEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}"
+  },
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
     "source=${localEnv:USERPROFILE}/.codex/auth.json,target=/home/node/.codex/auth.json,type=bind,readonly",
     "source=${localEnv:USERPROFILE}/.ssh,target=/home/node/.ssh,type=bind,readonly",
-    "source=${localEnv:USERPROFILE}/.gitconfig,target=/home/node/.gitconfig,type=bind,readonly"
+    "source=${localEnv:USERPROFILE}/.gitconfig,target=/home/node/.gitconfig,type=bind,readonly",
+    "source=${localEnv:APPDATA}/GitHub CLI,target=/home/node/.config/gh,type=bind,readonly"
   ]
 }

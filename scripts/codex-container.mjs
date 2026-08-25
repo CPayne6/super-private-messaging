@@ -11,7 +11,15 @@ const codexDirectory = resolve(repository, ".codex");
 const authFile = resolve(homedir(), ".codex", "auth.json");
 const sshDirectory = resolve(homedir(), ".ssh");
 const gitConfig = resolve(homedir(), ".gitconfig");
-const githubConfig = resolve(process.env.XDG_CONFIG_HOME ?? resolve(homedir(), ".config"), "gh");
+// GitHub CLI uses %APPDATA%\\GitHub CLI on Windows and ~/.config/gh on Linux.
+// GH_CONFIG_DIR takes precedence when the host has been configured explicitly.
+const githubConfigCandidates = [
+  process.env.GH_CONFIG_DIR,
+  process.env.XDG_CONFIG_HOME && resolve(process.env.XDG_CONFIG_HOME, "gh"),
+  resolve(homedir(), ".config", "gh"),
+  process.env.APPDATA && resolve(process.env.APPDATA, "GitHub CLI"),
+].filter(Boolean);
+const githubConfig = githubConfigCandidates.find((candidate) => existsSync(candidate));
 const dockerSocket = "/var/run/docker.sock";
 
 function stageGitCredentials() {
@@ -30,15 +38,6 @@ function stageGitCredentials() {
     const stagedConfig = resolve(directory, ".gitconfig");
     cpSync(gitConfig, stagedConfig);
     chmodSync(stagedConfig, 0o600);
-  }
-  if (existsSync(githubConfig)) {
-    const stagedGithub = resolve(directory, "gh");
-    cpSync(githubConfig, stagedGithub, { recursive: true });
-    chmodSync(stagedGithub, 0o700);
-    for (const entry of ["config.yml", "hosts.yml"]) {
-      const file = resolve(stagedGithub, entry);
-      if (existsSync(file)) chmodSync(file, 0o600);
-    }
   }
   return directory;
 }
@@ -90,6 +89,11 @@ if (process.platform === "win32") {
 
 if (process.stdin.isTTY && process.stdout.isTTY) args.push("--interactive", "--tty");
 
+// Windows GitHub CLI commonly stores its OAuth token in Credential Manager,
+// which is unavailable to Linux containers. GH_TOKEN is an optional, host-set
+// session credential that gh recognizes without writing it to container state.
+if (process.env.GH_TOKEN) args.push("--env", "GH_TOKEN");
+
 if (existsSync(authFile)) {
   args.push("--mount", `type=bind,src=${authFile},dst=/home/node/.codex/auth.json,readonly`);
 } else {
@@ -102,7 +106,9 @@ if (existsSync(authFile)) {
 const gitCredentials = stageGitCredentials();
 if (existsSync(resolve(gitCredentials, ".ssh"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, ".ssh")},dst=/home/node/.ssh,readonly`);
 if (existsSync(resolve(gitCredentials, ".gitconfig"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, ".gitconfig")},dst=/home/node/.gitconfig,readonly`);
-if (existsSync(resolve(gitCredentials, "gh"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, "gh")},dst=/home/node/.config/gh,readonly`);
+// Unlike SSH keys, gh accepts a read-only bind mount regardless of host file
+// modes. Keep it live so a host `gh auth login` refresh is visible immediately.
+if (githubConfig) args.push("--mount", `type=bind,src=${githubConfig},dst=/home/node/.config/gh,readonly`);
 
 // Verify that the Codex process can reach the Docker daemon before it starts.
 args.push(
