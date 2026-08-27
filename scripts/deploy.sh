@@ -45,6 +45,14 @@ wait_for_running() {
     sleep 4
   done
   docker service ps "${STACK_NAME}_${service}" --no-trunc >&2 || true
+  local task_ids
+  task_ids="$(docker service ps -q "${STACK_NAME}_${service}" 2>/dev/null || true)"
+  if [[ -n "$task_ids" ]]; then
+    # Include Swarm's scheduler/pull/volume error, even when no container was
+    # started and service logs are therefore unavailable.
+    docker inspect $task_ids >&2 || true
+  fi
+  docker node inspect self --format '{{json .Description.Resources}}' >&2 || true
   return 1
 }
 
