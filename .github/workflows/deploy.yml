@@ -87,8 +87,13 @@ jobs:
             done
             echo "===== node resources ====="
             docker node inspect self --format "{{json .Description.Resources}}" || true
+            echo "===== filesystem capacity ====="
+            df -h / /var/lib/docker || true
+            df -i / /var/lib/docker || true
             echo "===== Docker summary ====="
             docker info --format "{{json .DriverStatus}}" || true
+            docker system df || true
+            systemctl is-active docker || true
             docker ps -a --no-trunc || true
           ' > /tmp/swarm-diagnostics.txt 2>&1 || true
       - name: Upload Swarm diagnostics
