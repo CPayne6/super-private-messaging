@@ -53,7 +53,9 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/spm_deploy_key
+          # GitHub secrets pasted from Windows can retain CRLF line endings. OpenSSH
+          # requires a valid, newline-terminated private-key file.
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" | tr -d '\r' > ~/.ssh/spm_deploy_key
           chmod 600 ~/.ssh/spm_deploy_key
           cat > ~/.ssh/config << EOF
           Host spm-prod
