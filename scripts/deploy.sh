@@ -29,6 +29,12 @@ for image in api migrate web; do
   fi
 done
 
+# Pre-pull public runtime images too. A Swarm task can otherwise remain in
+# `Preparing` without surfacing a registry error through `docker service ps`.
+for image_ref in postgres:17-alpine redis:7.4-alpine cloudflare/cloudflared:2026.8.1; do
+  docker pull "$image_ref"
+done
+
 cd "$PROJECT_DIR"
 export IMAGE_TAG GITHUB_REPOSITORY_OWNER
 # Submit the stack first, then use the bounded checks below for actionable
