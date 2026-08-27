@@ -24,10 +24,12 @@ services:
 
   redis:
     image: redis:7.4-alpine
-    entrypoint: ["/bin/sh", "-ec"]
-    command: >-
-      exec redis-server --appendonly yes --maxmemory 96mb --maxmemory-policy noeviction
-      --requirepass "$$(cat /run/secrets/spm_redis_password)"
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        exec redis-server --appendonly yes --maxmemory 96mb --maxmemory-policy noeviction
+        --requirepass "$$(cat /run/secrets/spm_redis_password)"
     secrets: [spm_redis_password]
     volumes: [spm-redis-data:/data]
     networks: [cache]
