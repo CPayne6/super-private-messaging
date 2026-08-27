@@ -1,5 +1,3 @@
-name: super-private-messaging
-
 # Docker Swarm production stack. All secret values are supplied as Docker
 # secrets; see deploy/.env.production.example and scripts/setup-secrets.sh.
 services:
