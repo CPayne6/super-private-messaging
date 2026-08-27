@@ -31,7 +31,10 @@ done
 
 cd "$PROJECT_DIR"
 export IMAGE_TAG GITHUB_REPOSITORY_OWNER
-docker stack deploy --with-registry-auth --detach=false -c "$COMPOSE_FILE" "$STACK_NAME"
+# Submit the stack first, then use the bounded checks below for actionable
+# service diagnostics. `--detach=false` can wait indefinitely for a failed
+# task without ever printing its status.
+docker stack deploy --with-registry-auth --detach=true -c "$COMPOSE_FILE" "$STACK_NAME"
 
 wait_for_running() {
   local service="$1"
