@@ -42,6 +42,10 @@ export IMAGE_TAG GITHUB_REPOSITORY_OWNER
 # task without ever printing its status.
 docker stack deploy --with-registry-auth --detach=true -c "$COMPOSE_FILE" "$STACK_NAME"
 
+# Replace any task left stuck in Docker's Preparing state by a prior rollout.
+docker service update --force "${STACK_NAME}_postgres" >/dev/null
+docker service update --force "${STACK_NAME}_redis" >/dev/null
+
 wait_for_running() {
   local service="$1"
   for _ in $(seq 1 30); do
