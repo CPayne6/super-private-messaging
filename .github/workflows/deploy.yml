@@ -84,6 +84,8 @@ jobs:
             for service in postgres redis migrate api web cloudflared; do
               echo "===== spm_${service} tasks ====="
               docker service ps "spm_${service}" --no-trunc || true
+              echo "===== spm_${service} logs ====="
+              docker service logs --raw --tail 100 "spm_${service}" || true
             done
             echo "===== node resources ====="
             docker node inspect self --format "{{json .Description.Resources}}" || true

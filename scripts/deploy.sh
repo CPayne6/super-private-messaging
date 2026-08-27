@@ -42,19 +42,6 @@ export IMAGE_TAG GITHUB_REPOSITORY_OWNER
 # task without ever printing its status.
 docker stack deploy --with-registry-auth --detach=true -c "$COMPOSE_FILE" "$STACK_NAME"
 
-# A force update does not reliably replace a task that is already stuck in
-# Docker's Preparing state: it can retain the task's single replica slot.
-# Cycle the prerequisite services through zero replicas instead. This only
-# recreates containers; their named volumes and Docker secrets are retained.
-replace_prerequisite() {
-  local service="${STACK_NAME}_$1"
-  docker service scale --detach=true "${service}=0" >/dev/null
-  sleep 5
-  docker service scale --detach=true "${service}=1" >/dev/null
-}
-replace_prerequisite postgres
-replace_prerequisite redis
-
 wait_for_running() {
   local service="$1"
   for _ in $(seq 1 30); do
