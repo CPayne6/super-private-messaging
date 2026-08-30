@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     build: { sourcemap: false, outDir: "dist" },
+    test: { environment: "jsdom", globals: true },
     server: {
       watch: {
         usePolling:

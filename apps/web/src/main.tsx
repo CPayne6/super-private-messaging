@@ -1,9 +1,11 @@
 import "@ant-design/v5-patch-for-react-19";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Button,
   ConfigProvider,
+  Drawer,
+  Grid,
   Input,
   Layout,
   List,
@@ -16,6 +18,7 @@ import { canonicalCbor, normalizeUsername, signingBytes, websocketChallengeBytes
 import { generateVaultContents } from "./identity.js";
 import { debug, debugError } from "./debug.js";
 import { PrivateLocalState } from "./local-state.js";
+import { MessageComposer } from "./message-composer.js";
 import {
   WebCryptoMessageEngine,
   type WrappedConversationKey,
@@ -76,6 +79,74 @@ type SocketEvent =
   | { type: "authenticated" }
   | { type: "message"; message: WireMessage };
 
+type ConversationSummary = {
+  conversation: Conversation;
+  counterpart: string;
+  latest?: Message;
+};
+
+function ConversationList({
+  username,
+  summaries,
+  activeConversation,
+  identityVerified,
+  onNewConversation,
+  onSelect,
+  onDownload,
+  onRemove,
+}: {
+  username: string;
+  summaries: ConversationSummary[];
+  activeConversation?: string;
+  identityVerified: boolean;
+  onNewConversation: () => void;
+  onSelect: (id: string) => void;
+  onDownload: () => void;
+  onRemove: () => void;
+}): React.JSX.Element {
+  return (
+    <div className="conversation-list-content">
+      <Space direction="vertical" size="middle" className="full-width">
+        <div className="identity-header">
+          <div>
+            <Typography.Title level={3}>Messages</Typography.Title>
+            <Typography.Text type="secondary">{username}</Typography.Text>
+          </div>
+          <Button onClick={onNewConversation} disabled={!identityVerified}>
+            New conversation
+          </Button>
+        </div>
+        <List
+          dataSource={summaries}
+          locale={{ emptyText: "No conversations yet" }}
+          renderItem={(summary) => (
+            <List.Item className="conversation-item">
+              <button
+                type="button"
+                className={
+                  summary.conversation.id === activeConversation
+                    ? "conversation active"
+                    : "conversation"
+                }
+                onClick={() => onSelect(summary.conversation.id)}
+              >
+                <List.Item.Meta
+                  title={summary.counterpart}
+                  description={summary.latest?.text ?? "No messages yet"}
+                />
+              </button>
+            </List.Item>
+          )}
+        />
+        <Button onClick={onDownload}>Download identity file</Button>
+        <Button danger onClick={onRemove}>
+          Remove profile from this browser
+        </Button>
+      </Space>
+    </div>
+  );
+}
+
 function App(): React.JSX.Element {
   const [username, setUsername] = useState("");
   const [identity, setIdentity] = useState<VaultContents>();
@@ -89,6 +160,12 @@ function App(): React.JSX.Element {
   const [newConversationOpen, setNewConversationOpen] = useState(false);
   const [connection, setConnection] = useState("Loading your saved identity…");
   const [status, setStatus] = useState("");
+  const [conversationDrawerOpen, setConversationDrawerOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [localState] = useState(() => new PrivateLocalState());
 
   const registerPublicIdentity = useCallback(
@@ -449,6 +526,9 @@ function App(): React.JSX.Element {
     if (!activeConversation && summaries[0])
       setActiveConversation(summaries[0].conversation.id);
   }, [activeConversation, summaries]);
+  useEffect(() => {
+    if (isMobile && !activeConversation) setConversationDrawerOpen(true);
+  }, [activeConversation, isMobile]);
 
   const register = async () => {
     try {
@@ -555,14 +635,17 @@ function App(): React.JSX.Element {
     }
   };
   const send = async () => {
-    if (!identity || !engine || !identityVerified || !active || !draft.trim())
+    if (sendingRef.current || !identity || !engine || !identityVerified || !active || !draft.trim())
       return;
+    const messageText = draft.trim();
+    sendingRef.current = true;
+    setSending(true);
     try {
       debug("message.send.start");
       const encrypted = await engine.encrypt(
         active.id,
         active.key,
-        draft.trim(),
+        messageText,
       );
       const response = await fetch(`${api}/messages`, {
         method: "POST",
@@ -579,13 +662,17 @@ function App(): React.JSX.Element {
       if (!response.ok)
         throw await responseError(response, "Could not send message.");
       const result = (await response.json()) as { message: WireMessage };
-      addMessage({ ...result.message, text: draft.trim() });
+      addMessage({ ...result.message, text: messageText });
       setDraft("");
     } catch (error) {
       debugError("message.send.failed", error);
       setStatus(
         error instanceof Error ? error.message : "Could not send message.",
       );
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+      requestAnimationFrame(() => composerRef.current?.focus());
     }
   };
   const downloadIdentity = () => {
@@ -621,59 +708,58 @@ function App(): React.JSX.Element {
     <ConfigProvider theme={{ token: { colorPrimary: "#155e75" } }}>
       <Layout className="page messenger-page">
         <Layout.Content className="messenger">
-          <aside className="conversation-list">
-            <Space direction="vertical" size="middle" className="full-width">
-              <div className="identity-header">
-                <div>
-                  <Typography.Title level={3}>Messages</Typography.Title>
-                  <Typography.Text type="secondary">
-                    {identity.username}
-                  </Typography.Text>
-                </div>
-                <Button
-                  onClick={() => setNewConversationOpen(true)}
-                  disabled={!identityVerified}
-                >
-                  New conversation
-                </Button>
-              </div>
-              <List
-                dataSource={summaries}
-                locale={{ emptyText: "No conversations yet" }}
-                renderItem={(summary) => (
-                  <List.Item
-                    className={
-                      summary.conversation.id === activeConversation
-                        ? "conversation active"
-                        : "conversation"
-                    }
-                    onClick={() =>
-                      setActiveConversation(summary.conversation.id)
-                    }
-                  >
-                    <List.Item.Meta
-                      title={summary.counterpart}
-                      description={summary.latest?.text ?? "No messages yet"}
-                    />
-                  </List.Item>
-                )}
-              />
-              <Button onClick={downloadIdentity}>Download identity file</Button>
-              <Button danger onClick={() => void removeProfile()}>
-                Remove profile from this browser
-              </Button>
-            </Space>
+          <aside className="conversation-list desktop-conversation-list">
+            <ConversationList
+              username={identity.username}
+              summaries={summaries}
+              activeConversation={activeConversation}
+              identityVerified={identityVerified}
+              onNewConversation={() => setNewConversationOpen(true)}
+              onSelect={setActiveConversation}
+              onDownload={downloadIdentity}
+              onRemove={() => void removeProfile()}
+            />
           </aside>
+          <Drawer
+            title="Conversations"
+            placement="left"
+            className="conversation-drawer"
+            open={isMobile && conversationDrawerOpen}
+            onClose={() => setConversationDrawerOpen(false)}
+            width="min(88vw, 360px)"
+          >
+            <ConversationList
+              username={identity.username}
+              summaries={summaries}
+              activeConversation={activeConversation}
+              identityVerified={identityVerified}
+              onNewConversation={() => setNewConversationOpen(true)}
+              onSelect={(id) => {
+                setActiveConversation(id);
+                setConversationDrawerOpen(false);
+              }}
+              onDownload={downloadIdentity}
+              onRemove={() => void removeProfile()}
+            />
+          </Drawer>
           <main className="thread">
             {active ? (
               <>
                 <div className="thread-header">
-                  <Typography.Title level={3}>
-                    {active.participants
-                      .filter((participant) => participant !== username)
-                      .join(", ")}
-                  </Typography.Title>
-                  <Typography.Text type="secondary">
+                  <div className="thread-title">
+                    <Button
+                      className="conversations-control"
+                      onClick={() => setConversationDrawerOpen(true)}
+                    >
+                      Conversations
+                    </Button>
+                    <Typography.Title level={3}>
+                      {active.participants
+                        .filter((participant) => participant !== username)
+                        .join(", ")}
+                    </Typography.Title>
+                  </div>
+                  <Typography.Text className="connection-status" type="secondary">
                     {connection}
                   </Typography.Text>
                 </div>
@@ -692,21 +778,14 @@ function App(): React.JSX.Element {
                     </div>
                   ))}
                 </div>
-                <div className="composer">
-                  <Input.TextArea
-                    value={draft}
-                    autoSize={{ minRows: 1, maxRows: 5 }}
-                    placeholder="Write a message"
-                    onChange={(event) => setDraft(event.target.value)}
-                  />
-                  <Button
-                    type="primary"
-                    onClick={() => void send()}
-                    disabled={!identityVerified || !draft.trim()}
-                  >
-                    Send
-                  </Button>
-                </div>
+                <MessageComposer
+                  draft={draft}
+                  disabled={!identityVerified}
+                  sending={sending}
+                  textareaRef={composerRef}
+                  onDraftChange={setDraft}
+                  onSend={() => void send()}
+                />
               </>
             ) : (
               <div className="empty-thread">
@@ -729,6 +808,7 @@ function App(): React.JSX.Element {
         </Layout.Content>
       </Layout>
       <Modal
+        className="new-conversation-modal"
         title="New conversation"
         open={newConversationOpen}
         onOk={() => void startConversation()}
