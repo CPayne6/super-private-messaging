@@ -11,8 +11,8 @@ const codexDirectory = resolve(repository, ".codex");
 const authFile = resolve(homedir(), ".codex", "auth.json");
 const sshDirectory = resolve(homedir(), ".ssh");
 const gitConfig = resolve(homedir(), ".gitconfig");
-const githubConfig = resolve(process.env.XDG_CONFIG_HOME ?? resolve(homedir(), ".config"), "gh");
 const dockerSocket = "/var/run/docker.sock";
+const ghConfigDirectory = "/home/node/.codex/gh";
 
 function stageGitCredentials() {
   const directory = mkdtempSync(resolve(tmpdir(), "spm-codex-git-"));
@@ -30,15 +30,6 @@ function stageGitCredentials() {
     const stagedConfig = resolve(directory, ".gitconfig");
     cpSync(gitConfig, stagedConfig);
     chmodSync(stagedConfig, 0o600);
-  }
-  if (existsSync(githubConfig)) {
-    const stagedGithub = resolve(directory, "gh");
-    cpSync(githubConfig, stagedGithub, { recursive: true });
-    chmodSync(stagedGithub, 0o700);
-    for (const entry of ["config.yml", "hosts.yml"]) {
-      const file = resolve(stagedGithub, entry);
-      if (existsSync(file)) chmodSync(file, 0o600);
-    }
   }
   return directory;
 }
@@ -76,6 +67,10 @@ const args = [
 ];
 
 args.push("--mount", `type=bind,src=${dockerSocket},dst=${dockerSocket}`);
+// Keep GitHub CLI authentication inside the persisted Codex directory. This
+// works consistently across host platforms (including Windows Credential
+// Manager) and lets `gh auth login` inside Codex survive future runs.
+args.push("--env", `GH_CONFIG_DIR=${ghConfigDirectory}`);
 if (process.platform === "win32") {
   // Docker Desktop's proxy socket is root:root with group read/write access.
   args.push("--group-add", "0");
@@ -102,8 +97,6 @@ if (existsSync(authFile)) {
 const gitCredentials = stageGitCredentials();
 if (existsSync(resolve(gitCredentials, ".ssh"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, ".ssh")},dst=/home/node/.ssh,readonly`);
 if (existsSync(resolve(gitCredentials, ".gitconfig"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, ".gitconfig")},dst=/home/node/.gitconfig,readonly`);
-if (existsSync(resolve(gitCredentials, "gh"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, "gh")},dst=/home/node/.config/gh,readonly`);
-
 // Verify that the Codex process can reach the Docker daemon before it starts.
 args.push(
   image,
