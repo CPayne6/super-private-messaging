@@ -1,37 +1,18 @@
 html,
 body,
-#root {
-  min-height: 100%;
-  margin: 0;
-}
+#root { min-height: 100%; margin: 0; }
 
-body {
-  font-family: system-ui, sans-serif;
-  background: #f8fafc;
-}
-
-.page {
-  min-height: 100vh;
-}
-
-.identity-setup {
-  max-width: 720px;
-  margin: 12vh auto;
-  padding: 24px;
-}
-
-.full-width {
-  width: 100%;
-}
-
-.messenger-page {
-  padding: 24px;
-}
+body { overflow-x: hidden; font-family: system-ui, sans-serif; background: #f8fafc; }
+.page { min-height: 100vh; min-height: 100dvh; }
+.identity-setup { max-width: 720px; margin: 12vh auto; padding: 24px; }
+.full-width { width: 100%; }
+.messenger-page { padding: 24px; }
 
 .messenger {
   display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
   min-height: calc(100vh - 48px);
+  min-height: calc(100dvh - 48px);
   max-width: 1200px;
   margin: 0 auto;
   overflow: hidden;
@@ -41,131 +22,56 @@ body {
   box-shadow: 0 12px 32px rgb(15 23 42 / 8%);
 }
 
-.conversation-list {
-  padding: 18px;
-  border-right: 1px solid #dbe4ee;
-  background: #f8fafc;
-}
-
-.identity-header,
-.thread-header,
-.composer {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.identity-header .ant-typography {
-  margin: 0;
-}
+.conversation-list { min-width: 0; overflow-y: auto; border-right: 1px solid #dbe4ee; background: #f8fafc; }
+.conversation-list-content { padding: 18px; }
+.identity-header, .thread-header, .composer, .thread-title { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.identity-header .ant-typography, .thread-header .ant-typography { margin: 0; }
+.conversation-item { padding: 0 !important; border-block-end: 0 !important; }
 
 .conversation {
-  padding: 10px !important;
-  cursor: pointer;
-  border-radius: 8px;
+  display: block; width: 100%; min-height: 44px; padding: 10px !important; cursor: pointer;
+  text-align: left; color: inherit; border: 0; border-radius: 8px; background: transparent;
 }
+.conversation.active, .conversation:hover, .conversation:focus-visible { background: #e0f2fe; outline: 2px solid #155e75; outline-offset: -2px; }
+.conversation .ant-list-item-meta-description { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-.conversation.active,
-.conversation:hover {
-  background: #e0f2fe;
-}
+.thread { display: flex; min-width: 0; min-height: 0; flex-direction: column; }
+.thread-header { min-height: 72px; padding: 0 24px; border-bottom: 1px solid #dbe4ee; }
+.thread-title { min-width: 0; justify-content: flex-start; }
+.thread-title .ant-typography { overflow-wrap: anywhere; }
+.conversations-control { display: none; }
+.connection-status { flex: 0 1 auto; text-align: right; }
 
-.conversation .ant-list-item-meta-description {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
+.message-list { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; gap: 12px; padding: 24px; overflow-y: auto; overscroll-behavior: contain; }
+.message-row { display: flex; min-width: 0; }
+.message-row.outgoing { justify-content: flex-end; }
+.message-bubble { max-width: min(75%, 560px); padding: 10px 12px; color: #0f172a; border-radius: 12px; background: #e2e8f0; overflow-wrap: anywhere; }
+.message-row.outgoing .message-bubble { color: #fff; background: #155e75; }
+.message-bubble small { display: block; margin-top: 6px; opacity: 0.72; }
 
-.thread {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
+.composer { flex: 0 0 auto; align-items: flex-end; padding: 16px 24px; border-top: 1px solid #dbe4ee; }
+.composer-input { min-width: 0; flex: 1; }
+.composer .ant-input { font-size: 16px; resize: none; }
+.composer .ant-btn { min-width: 44px; min-height: 44px; }
+.empty-thread { display: grid; flex: 1; place-items: center; padding: 24px; color: #64748b; text-align: center; }
+.messenger-status { margin: 0 24px 16px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-.thread-header {
-  min-height: 72px;
-  padding: 0 24px;
-  border-bottom: 1px solid #dbe4ee;
-}
-
-.thread-header .ant-typography {
-  margin: 0;
-}
-
-.message-list {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 12px;
-  padding: 24px;
-  overflow-y: auto;
-}
-
-.message-row {
-  display: flex;
-}
-
-.message-row.outgoing {
-  justify-content: flex-end;
-}
-
-.message-bubble {
-  max-width: min(75%, 560px);
-  padding: 10px 12px;
-  color: #0f172a;
-  border-radius: 12px;
-  background: #e2e8f0;
-  overflow-wrap: anywhere;
-}
-
-.message-row.outgoing .message-bubble {
-  color: #fff;
-  background: #155e75;
-}
-
-.message-bubble small {
-  display: block;
-  margin-top: 6px;
-  opacity: 0.72;
-}
-
-.composer {
-  padding: 16px 24px;
-  border-top: 1px solid #dbe4ee;
-}
-
-.composer .ant-input {
-  resize: none;
-}
-
-.empty-thread {
-  display: grid;
-  flex: 1;
-  place-items: center;
-  color: #64748b;
-}
-
-.messenger-status {
-  margin: 0 24px 16px;
-}
-
-@media (max-width: 720px) {
-  .messenger-page {
-    padding: 0;
-  }
-
-  .messenger {
-    grid-template-columns: 1fr;
-    min-height: 100vh;
-    border: 0;
-    border-radius: 0;
-  }
-
-  .conversation-list {
-    max-height: 36vh;
-    border-right: 0;
-    border-bottom: 1px solid #dbe4ee;
-    overflow-y: auto;
-  }
+@media (max-width: 767px) {
+  .messenger-page { padding: 0; }
+  .messenger { grid-template-columns: minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; border: 0; border-radius: 0; }
+  .desktop-conversation-list { display: none; }
+  .thread-header { min-height: 56px; padding: max(8px, env(safe-area-inset-top)) 12px 8px; align-items: flex-start; }
+  .thread-title { align-items: flex-start; flex-wrap: wrap; gap: 6px; }
+  .thread-header .ant-typography { font-size: 18px; line-height: 1.25; }
+  .conversations-control { display: inline-flex; min-height: 44px; align-items: center; }
+  .connection-status { max-width: 42%; padding-top: 4px; overflow-wrap: anywhere; font-size: 12px; }
+  .message-list { padding: 16px 12px; }
+  .message-bubble { max-width: 86%; }
+  .composer { gap: 8px; padding: 12px 12px max(12px, env(safe-area-inset-bottom)); }
+  .messenger-status { margin: 0 12px 12px; }
+  .conversation-drawer .ant-drawer-body { padding: 0; }
+  .conversation-drawer .conversation-list-content { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .new-conversation-modal { max-width: calc(100vw - 24px); margin: 0 auto; }
+  .identity-setup { margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom)); }
 }
