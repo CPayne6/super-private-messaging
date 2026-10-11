@@ -53,7 +53,9 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/spm_deploy_key
+          # GitHub secrets pasted from Windows can retain CRLF line endings. OpenSSH
+          # requires a valid, newline-terminated private-key file.
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" | tr -d '\r' > ~/.ssh/spm_deploy_key
           chmod 600 ~/.ssh/spm_deploy_key
           cat > ~/.ssh/config << EOF
           Host spm-prod
@@ -74,3 +76,32 @@ jobs:
       - name: Deploy stack
         run: |
           ssh spm-prod "chmod +x '${{ vars.DEPLOY_PROJECT_DIR }}/scripts/deploy.sh' && cd '${{ vars.DEPLOY_PROJECT_DIR }}' && PROJECT_DIR='${{ vars.DEPLOY_PROJECT_DIR }}' GITHUB_REPOSITORY_OWNER=cpayne6 IMAGE_TAG=${{ github.sha }} ./scripts/deploy.sh"
+      - name: Collect Swarm diagnostics
+        if: failure()
+        run: |
+          ssh spm-prod '
+            docker stack services spm || true
+            for service in postgres redis migrate api web cloudflared; do
+              echo "===== spm_${service} tasks ====="
+              docker service ps "spm_${service}" --no-trunc || true
+              echo "===== spm_${service} logs ====="
+              docker service logs --raw --tail 100 "spm_${service}" || true
+            done
+            echo "===== node resources ====="
+            docker node inspect self --format "{{json .Description.Resources}}" || true
+            echo "===== filesystem capacity ====="
+            df -h / /var/lib/docker || true
+            df -i / /var/lib/docker || true
+            echo "===== Docker summary ====="
+            docker info --format "{{json .DriverStatus}}" || true
+            docker system df || true
+            systemctl is-active docker || true
+            docker ps -a --no-trunc || true
+          ' > /tmp/swarm-diagnostics.txt 2>&1 || true
+      - name: Upload Swarm diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swarm-diagnostics
+          path: /tmp/swarm-diagnostics.txt
+          if-no-files-found: warn

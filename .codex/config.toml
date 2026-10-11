@@ -1,6 +1,7 @@
 # Defaults for `pnpm codex`. Other Codex state in this directory is ignored.
 model = "gpt-5.6-terra"
 model_reasoning_effort = "medium"
+plan_mode_reasoning_effort = "xhigh"
 
 [projects."/workspace/super-private-messaging"]
 trust_level = "trusted"

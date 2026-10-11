@@ -11,16 +11,8 @@ const codexDirectory = resolve(repository, ".codex");
 const authFile = resolve(homedir(), ".codex", "auth.json");
 const sshDirectory = resolve(homedir(), ".ssh");
 const gitConfig = resolve(homedir(), ".gitconfig");
-// GitHub CLI uses %APPDATA%\\GitHub CLI on Windows and ~/.config/gh on Linux.
-// GH_CONFIG_DIR takes precedence when the host has been configured explicitly.
-const githubConfigCandidates = [
-  process.env.GH_CONFIG_DIR,
-  process.env.XDG_CONFIG_HOME && resolve(process.env.XDG_CONFIG_HOME, "gh"),
-  resolve(homedir(), ".config", "gh"),
-  process.env.APPDATA && resolve(process.env.APPDATA, "GitHub CLI"),
-].filter(Boolean);
-const githubConfig = githubConfigCandidates.find((candidate) => existsSync(candidate));
 const dockerSocket = "/var/run/docker.sock";
+const ghConfigDirectory = "/home/node/.codex/gh";
 
 function stageGitCredentials() {
   const directory = mkdtempSync(resolve(tmpdir(), "spm-codex-git-"));
@@ -75,6 +67,10 @@ const args = [
 ];
 
 args.push("--mount", `type=bind,src=${dockerSocket},dst=${dockerSocket}`);
+// Keep GitHub CLI authentication inside the persisted Codex directory. This
+// works consistently across host platforms (including Windows Credential
+// Manager) and lets `gh auth login` inside Codex survive future runs.
+args.push("--env", `GH_CONFIG_DIR=${ghConfigDirectory}`);
 if (process.platform === "win32") {
   // Docker Desktop's proxy socket is root:root with group read/write access.
   args.push("--group-add", "0");
@@ -106,10 +102,6 @@ if (existsSync(authFile)) {
 const gitCredentials = stageGitCredentials();
 if (existsSync(resolve(gitCredentials, ".ssh"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, ".ssh")},dst=/home/node/.ssh,readonly`);
 if (existsSync(resolve(gitCredentials, ".gitconfig"))) args.push("--mount", `type=bind,src=${resolve(gitCredentials, ".gitconfig")},dst=/home/node/.gitconfig,readonly`);
-// Unlike SSH keys, gh accepts a read-only bind mount regardless of host file
-// modes. Keep it live so a host `gh auth login` refresh is visible immediately.
-if (githubConfig) args.push("--mount", `type=bind,src=${githubConfig},dst=/home/node/.config/gh,readonly`);
-
 // Verify that the Codex process can reach the Docker daemon before it starts.
 args.push(
   image,

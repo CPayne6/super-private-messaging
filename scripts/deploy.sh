@@ -29,9 +29,18 @@ for image in api migrate web; do
   fi
 done
 
+# Pre-pull public runtime images too. A Swarm task can otherwise remain in
+# `Preparing` without surfacing a registry error through `docker service ps`.
+for image_ref in postgres:17-alpine redis:7.4-alpine cloudflare/cloudflared:2026.8.1; do
+  docker pull "$image_ref"
+done
+
 cd "$PROJECT_DIR"
 export IMAGE_TAG GITHUB_REPOSITORY_OWNER
-docker stack deploy --with-registry-auth --detach=false -c "$COMPOSE_FILE" "$STACK_NAME"
+# Submit the stack first, then use the bounded checks below for actionable
+# service diagnostics. `--detach=false` can wait indefinitely for a failed
+# task without ever printing its status.
+docker stack deploy --with-registry-auth --detach=true -c "$COMPOSE_FILE" "$STACK_NAME"
 
 wait_for_running() {
   local service="$1"
@@ -42,6 +51,14 @@ wait_for_running() {
     sleep 4
   done
   docker service ps "${STACK_NAME}_${service}" --no-trunc >&2 || true
+  local task_ids
+  task_ids="$(docker service ps -q "${STACK_NAME}_${service}" 2>/dev/null || true)"
+  if [[ -n "$task_ids" ]]; then
+    # Include Swarm's scheduler/pull/volume error, even when no container was
+    # started and service logs are therefore unavailable.
+    docker inspect $task_ids >&2 || true
+  fi
+  docker node inspect self --format '{{json .Description.Resources}}' >&2 || true
   return 1
 }
 
@@ -49,7 +66,8 @@ wait_for_running postgres
 wait_for_running redis
 
 # A forced run ensures forward-only migrations are evaluated on every deploy.
-docker service update --force "${STACK_NAME}_migrate" >/dev/null
+# Keep it detached so the bounded status loop below remains authoritative.
+docker service update --detach=true --force "${STACK_NAME}_migrate" >/dev/null
 for _ in $(seq 1 30); do
   state="$(docker service ps "${STACK_NAME}_migrate" --no-trunc --format '{{.CurrentState}}' | head -1)"
   if [[ "$state" == Complete* ]]; then break; fi
