@@ -29,7 +29,14 @@ async function bootstrap(): Promise<void> {
       callback: (error: Error | null, allow?: boolean) => void,
     ) => callback(null, !origin || config.allowedOrigins.includes(origin)),
     methods: ["GET", "POST", "DELETE"],
-    allowedHeaders: ["content-type"],
+    allowedHeaders: [
+      "content-type",
+      "x-spm-username",
+      "x-spm-request-id",
+      "x-spm-expires-at",
+      "x-spm-payload-hash",
+      "x-spm-signature",
+    ],
     credentials: false,
     maxAge: 600,
   };

@@ -85,6 +85,11 @@ if (process.platform === "win32") {
 
 if (process.stdin.isTTY && process.stdout.isTTY) args.push("--interactive", "--tty");
 
+// Windows GitHub CLI commonly stores its OAuth token in Credential Manager,
+// which is unavailable to Linux containers. GH_TOKEN is an optional, host-set
+// session credential that gh recognizes without writing it to container state.
+if (process.env.GH_TOKEN) args.push("--env", "GH_TOKEN");
+
 if (existsSync(authFile)) {
   args.push("--mount", `type=bind,src=${authFile},dst=/home/node/.codex/auth.json,readonly`);
 } else {
