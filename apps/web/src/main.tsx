@@ -564,16 +564,17 @@ function App(): React.JSX.Element {
         active.key,
         draft.trim(),
       );
+      const messageRequest = {
+        sender: identity.username,
+        conversationId: active.id,
+        nonce: b64(encrypted.nonce),
+        ciphertext: b64(encrypted.ciphertext),
+        sentAt: Date.now(),
+      };
       const response = await fetch(`${api}/messages`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          sender: identity.username,
-          conversationId: active.id,
-          nonce: b64(encrypted.nonce),
-          ciphertext: b64(encrypted.ciphertext),
-          sentAt: Date.now(),
-        }),
+        headers: await signedHeaders(identity, "/v1/messages", messageRequest),
+        body: JSON.stringify(messageRequest),
       });
       debug("message.send.response", { status: response.status });
       if (!response.ok)

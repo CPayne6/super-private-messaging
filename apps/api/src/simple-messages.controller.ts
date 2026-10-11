@@ -20,6 +20,10 @@ import type {
 
 const bytes = (value: string) => new Uint8Array(Buffer.from(value, "base64"));
 const base64 = (value: Buffer) => value.toString("base64");
+// Clients sign requests with a one-minute lifetime. Permit modest browser/API
+// clock skew: the browser's clock is not authoritative. The request ID remains
+// single-use, and the client-generated lifetime is still one minute.
+const MAX_SIGNED_REQUEST_CLOCK_SKEW_MS = 5 * 60_000;
 const uuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -63,7 +67,7 @@ export class SimpleMessagesController {
     const expiresAt = Number(headers["x-spm-expires-at"]);
     const signature = headers["x-spm-signature"];
     const payloadHash = headers["x-spm-payload-hash"];
-    if (!username || typeof requestId !== "string" || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 60_000 || typeof signature !== "string" || typeof payloadHash !== "string")
+    if (!username || typeof requestId !== "string" || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + MAX_SIGNED_REQUEST_CLOCK_SKEW_MS || typeof signature !== "string" || typeof payloadHash !== "string")
       throw new UnauthorizedException("A valid signed request is required.");
     const hash = createHash("sha256").update(canonicalCbor(payload)).digest();
     if (payloadHash !== hash.toString("base64") || this.usedRequestIds.has(requestId))
@@ -211,8 +215,11 @@ export class SimpleMessagesController {
     }));
   }
 
-  @Post("messages") async send(@Body() body: SendMessage) {
-    const sender = normalizeUsername(body.sender);
+  @Post("messages") async send(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Body() body: SendMessage,
+  ) {
+    const sender = await this.authenticatedUsername(headers, "POST", "/v1/messages", body);
     if (
       !uuid(body.conversationId) ||
       !Number.isSafeInteger(body.sentAt) ||
